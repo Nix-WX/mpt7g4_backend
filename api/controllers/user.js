@@ -1,11 +1,8 @@
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const errorHandler = require('../util/errorHandler');
 
 const User = require('../models/user');
 const History = require('../models/history');
-const Shop = require('../models/shop');
-const { history_checkIn } = require('./history');
 
 
 exports.user_getAll = (req, res, next) => {
@@ -31,40 +28,33 @@ exports.user_signup = (req, res, next) => {
             });
         }
         else {
-            bcrypt.hash(req.body.password, 10, (err, hash) => {
-                if(err) {
-                    return errorHandler(res, err);
-                }
-                else {
-                    const user = new User({
-                        phone: req.body.phone,
-                        password: hash,
-                        name: req.body.name,
-                        gender: req.body.gender,
-                        status: req.body.status
-                    });
-
-                    user.save()
-                    .then(result => {
-                        const token = jwt.sign({ _id: result._id, phone: result.phone }, process.env.JWT_KEY, { expiresIn: "1h" });
-
-                        return res.status(200).json({
-                            message: 'User created successfully',
-                            data: {
-                                user: {
-                                    _id: result._id, 
-                                    phone: result.phone,
-                                    name: result.name,
-                                    gender: result.gender,
-                                    status: result.status
-                                },
-                                token: token
-                            }
-                        });
-                    })
-                    .catch(err => errorHandler(res, err));
-                }
+            const user = new User({
+                phone: req.body.phone,
+                password: req.body.password,
+                name: req.body.name,
+                gender: req.body.gender,
+                status: req.body.status
             });
+
+            user.save()
+            .then(result => {
+                const token = jwt.sign({ _id: result._id, phone: result.phone }, process.env.JWT_KEY, { expiresIn: "1h" });
+
+                return res.status(200).json({
+                    message: 'User created successfully',
+                    data: {
+                        user: {
+                            _id: result._id, 
+                            phone: result.phone,
+                            name: result.name,
+                            gender: result.gender,
+                            status: result.status
+                        },
+                        token: token
+                    }
+                });
+            })
+            .catch(err => errorHandler(res, err));
         }
     })
     .catch(err => errorHandler(res, err));
@@ -82,39 +72,30 @@ exports.user_login = (req, res, next) => {
             });
         }
 
-        bcrypt.compare(req.body.password, user.password, (err, result) => {
-            if(err) {
-                return res.status(401).json({
-                    error: {
-                        message: 'Invalid phone or password.'
-                    }
-                });
-            }
+        if(user.password === req.body.password) {
+            const token = jwt.sign({ _id: user._id, phone: user.phone }, process.env.JWT_KEY, { expiresIn: "1h" });
 
-            if(result) {
-                const token = jwt.sign({ _id: user._id, phone: user.phone }, process.env.JWT_KEY, { expiresIn: "1h" });
-
-                return res.status(200).json({
-                    message: 'Authentication successful',
-                    data: {
-                        user: {
-                            _id: user._id,
-                            phone: user.phone,
-                            name: user.name,
-                            gender: user.gender,
-                            status: user.status
-                        },
-                        token: token
-                    }
-                });
-            }
-
+            return res.status(200).json({
+                message: 'Authentication successful',
+                data: {
+                    user: {
+                        _id: user._id,
+                        phone: user.phone,
+                        name: user.name,
+                        gender: user.gender,
+                        status: user.status
+                    },
+                    token: token
+                }
+            });
+        }
+        else {
             return res.status(401).json({
                 error: {
                     message: 'Invalid phone or password.'
                 }
             });
-        });
+        }
     })
     .catch(err => errorHandler(res, err));
 };
@@ -131,60 +112,28 @@ exports.user_update = (req, res, next) => {
             });
         }
         else {
-            if(req.body.password) {
-                bcrypt.hash(req.body.password, 10, (err, hash) => {
-                    if(err) {
-                        return errorHandler(res, err);
-                    }
-                    else {
-                        User.findByIdAndUpdate(req.params.userId, { 
-                            phone: req.body.phone ? req.body.phone : user.phone,
-                            password: hash ? hash : user.password,
-                            name: req.body.name ? req.body.name : user.name,
-                            gender: req.body.gender ? req.body.gender : user.gender,
-                            status: req.body.status ? req.body.status : user.status
-                        }, { new: true, runValidators: true })
-                        .then(result => {
-                            res.status(200).json({
-                                message: 'User updated successfully',
-                                data: {
-                                    user: {
-                                        _id: result._id,
-                                        phone: result.phone,
-                                        name: result.name,
-                                        gender: result.gender,
-                                        status: result.status
-                                    }
-                                }
-                            });
-                        })
-                        .catch(err => errorHandler(res, err));
+            User.findByIdAndUpdate(req.params.userId, { 
+                phone: req.body.phone ? req.body.phone : user.phone,
+                password: req.body.password ? req.body.password : user.password,
+                name: req.body.name ? req.body.name : user.name,
+                gender: req.body.gender ? req.body.gender : user.gender,
+                status: req.body.status ? req.body.status : user.status
+            }, { new: true, runValidators: true })
+            .then(result => {
+                res.status(200).json({
+                    message: 'User updated successfully',
+                    data: {
+                        user: {
+                            _id: result._id,
+                            phone: result.phone,
+                            name: result.name,
+                            gender: result.gender,
+                            status: result.status
+                        }
                     }
                 });
-            }
-            else {
-                User.findByIdAndUpdate(req.params.userId, { 
-                    phone: req.body.phone ? req.body.phone : user.phone,
-                    name: req.body.name ? req.body.name : user.name,
-                    gender: req.body.gender ? req.body.gender : user.gender,
-                    status: req.body.status ? req.body.status : user.status
-                }, { new: true, runValidators: true })
-                .then(result => {
-                    res.status(200).json({
-                        message: 'User updated successfully',
-                        data: {
-                            user: {
-                                _id: result._id,
-                                phone: result.phone,
-                                name: result.name,
-                                gender: result.gender,
-                                status: result.status
-                            }
-                        }
-                    });
-                })
-                .catch(err => errorHandler(res, err));
-            }
+            })
+            .catch(err => errorHandler(res, err));
         }
     })
     .catch(err => errorHandler(res, err));
