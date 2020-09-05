@@ -15,6 +15,8 @@ router.post('/login', UserController.user_login);
 
 router.post('/diagnosed', UserController.user_diagnosed);
 
+router.post('/recovered', UserController.user_recovered);
+
 router.post('/:userId', UserController.user_update);
 
 module.exports = router;

@@ -254,7 +254,7 @@ exports.user_diagnosed = (req, res, next) => {
     User.findById(req.body.userId)
     .then(user => {
         if(!user) {
-            res.status(404).json({
+            return res.status(404).json({
                 error: {
                     message: 'User not found'
                 }
@@ -274,6 +274,7 @@ exports.user_diagnosed = (req, res, next) => {
 
                 DailyStatus.findOneAndUpdate({ date: new Date().toLocaleDateString() }, { $inc: { diagnosed : 1 } }, { upsert: true })
                 .then(updated => {
+
                     var fortnightAgo = new Date(Date.now() - 12096e5);
 
                     History.find({ user: req.body.userId, checkIn: { $gte: fortnightAgo } })
@@ -319,6 +320,51 @@ exports.user_diagnosed = (req, res, next) => {
 
                     })
                     .catch(err => errorHandler(res, err));
+                })
+                .catch(err => errorHandler(res, err));
+            })
+            .catch(err => errorHandler(res, err));
+        }
+    })
+    .catch(err => errorHandler(res, err));
+};
+
+
+exports.user_recovered = (req, res, next) => {
+    User.findById(req.body.userId)
+    .then(user => {
+        if(!user) {
+            return res.status(404).json({
+                error: {
+                    message: 'User not found'
+                }
+            });
+        }
+        else {
+            if(user.status === 'Low') {
+                return res.status(409).json({
+                    error: { 
+                        message: 'User already recovered / not detected'
+                    }
+                });
+            }
+            
+            User.findByIdAndUpdate(req.body.userId, { status: 'Low' }, { new : true, runValidators: true})
+            .then(updatedUser => {
+                DailyStatus.findOneAndUpdate({ date: new Date().toLocaleDateString() }, { $inc: { recovered : 1 } }, { upsert: true })
+                .then(updated => {
+                    res.status(200).json({
+                        message: 'User updated successfully',
+                        data: {
+                            user: {
+                                _id: updatedUser._id,
+                                phone: updatedUser.phone,
+                                name: updatedUser.name,
+                                gender: updatedUser.gender,
+                                status: updatedUser.status
+                            }
+                        }
+                    });
                 })
                 .catch(err => errorHandler(res, err));
             })

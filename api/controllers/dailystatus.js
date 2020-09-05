@@ -29,7 +29,8 @@ exports.dailyStatus_getToday = (req, res, next) => {
                                 recovered: savedResult.recovered,
                                 diagnosed: savedResult.diagnosed,
                                 activeDiagnosed: activeDiagnosedUsers.length,
-                                cumulatedDiagnosed: cumulatedDiagnosed
+                                cumulatedDiagnosed: cumulatedDiagnosed,
+                                date: result.date.toString()
                             }
                         });
                     })
@@ -54,7 +55,8 @@ exports.dailyStatus_getToday = (req, res, next) => {
                             recovered: result.recovered,
                             diagnosed: result.diagnosed,
                             activeDiagnosed: activeDiagnosedUsers.length,
-                            cumulatedDiagnosed: cumulatedDiagnosed
+                            cumulatedDiagnosed: cumulatedDiagnosed,
+                            date: result.date.toString()
                         }
                     });
                 })
