@@ -304,10 +304,10 @@ exports.user_diagnosed = (req, res, next) => {
                             const userIdQuery = involvedHistories.map(history => {
                                 returnArr[history.shop].push(history.user);
     
-                                return { _id: history.user }
+                                return { _id: history.user  }
                             });
 
-                            User.updateMany({ $or: userIdQuery }, { $set: { status: 'High' } })
+                            User.updateMany({ $and: [ { $or: userIdQuery }, { status: { $ne: 'Diagnosed' } } ] }, { $set: { status: 'High' } })
                             .then(result => {
                                 res.status(200).json({
                                     message: 'Affected user updated successfully'
