@@ -1,6 +1,6 @@
 const errorHandler = require('../util/errorHandler');
 
-const DailyStatus = require('../models/dailyStatus');
+const DailyStatus = require('../models/dailystatus');
 const User = require('../models/user');
 
 

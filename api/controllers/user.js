@@ -3,7 +3,7 @@ const errorHandler = require('../util/errorHandler');
 
 const User = require('../models/user');
 const History = require('../models/history');
-const DailyStatus = require('../models/dailyStatus');
+const DailyStatus = require('../models/dailystatus');
 
 exports.user_getAll = (req, res, next) => {
     User.find()
