@@ -207,8 +207,7 @@ exports.user_update = (req, res, next) => {
                         status: req.body.status ? req.body.status : user.status
                     }, { new: true, runValidators: true })
                     .then(result => {
-
-                        if(req.body.status && user.status.equals("Diagnosed") && !req.body.status.equals(user.status)) {
+                        if(req.body.status && user.status === "Diagnosed" && req.body.status !== user.status) {
                             DailyStatus.findOneAndUpdate({ date: new Date().toLocaleDateString() }, { $inc: { recovered : 1 } }, { upsert: true })
                             .then(updated => {
                                 res.status(200).json({
@@ -262,6 +261,14 @@ exports.user_diagnosed = (req, res, next) => {
             });
         }
         else {
+            if(user.status === 'Diagnosed') {
+                return res.status(409).json({
+                    error: { 
+                        message: 'User already diagnosed'
+                    }
+                });
+            }
+            
             User.findByIdAndUpdate(req.body.userId, { status: 'Diagnosed' }, { new: true, runValidators: true })
             .then(updatedUser => {
 
