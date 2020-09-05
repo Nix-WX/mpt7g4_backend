@@ -30,7 +30,7 @@ exports.user_getUserByPhone = (req, res, next) => {
 
 
 exports.user_getAffectedUsers = (req, res, next) => {
-    User.findById(req.params.userId)
+    User.findOne({ phone: req.params.phone })
     .then(user => {
         if(!user) {
             res.status(404).json({
@@ -42,11 +42,12 @@ exports.user_getAffectedUsers = (req, res, next) => {
         else {
             var fortnightAgo = new Date(Date.now() - 12096e5);
 
-            History.find({ user: req.body.userId, checkIn: { $gte: fortnightAgo } })
+            History.find({ user: user._id, checkIn: { $gte: fortnightAgo } })
             .then(histories => {
                 if(histories.length <= 0) {
                     return res.status(200).json({
-                        message: 'No Affected User'
+                        message: 'No Affected User',
+                        data: []
                     });
                 }
 
@@ -60,13 +61,12 @@ exports.user_getAffectedUsers = (req, res, next) => {
                     }
                 });
                 
-                
                 let affectedUsersAdded = {};
                 let affectedUsers = [];
                 
-                History.find({ $and: [ { user: { $ne: req.body.userId } } , { $or: query }] })
+                History.find({ $and: [ { user: { $ne: user._id } } , { $or: query }] })
                 .then(involvedHistories => {
-                    const userIdQuery = involvedHistories.map(history => {
+                    involvedHistories.map(history => {
                         if(!affectedUsersAdded[history.user]) {
                             affectedUsersAdded[history.user] = true;
                             affectedUsers.push({ user: history.user });
@@ -80,7 +80,7 @@ exports.user_getAffectedUsers = (req, res, next) => {
 
                         res.status(200).json({
                             message: 'Affected user returned successfully',
-                            data: populated_result
+                            data: populated_result.map(el => el.user)
                         });
                     });
                 })

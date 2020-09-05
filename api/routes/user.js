@@ -7,7 +7,7 @@ router.get('/', UserController.user_getAll);
 
 router.get('/searchByPhone/:phone', UserController.user_getUserByPhone);
 
-router.get('/getAffectedUser/:userId', UserController.user_getAffectedUsers);
+router.get('/getAffectedUser/:phone', UserController.user_getAffectedUsers);
 
 router.post('/signup', UserController.user_signup);
 
