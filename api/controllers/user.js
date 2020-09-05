@@ -112,28 +112,41 @@ exports.user_update = (req, res, next) => {
             });
         }
         else {
-            User.findByIdAndUpdate(req.params.userId, { 
-                phone: req.body.phone ? req.body.phone : user.phone,
-                password: req.body.password ? req.body.password : user.password,
-                name: req.body.name ? req.body.name : user.name,
-                gender: req.body.gender ? req.body.gender : user.gender,
-                status: req.body.status ? req.body.status : user.status
-            }, { new: true, runValidators: true })
-            .then(result => {
-                res.status(200).json({
-                    message: 'User updated successfully',
-                    data: {
-                        user: {
-                            _id: result._id,
-                            phone: result.phone,
-                            name: result.name,
-                            gender: result.gender,
-                            status: result.status
+            User.findOne({ phone: req.body.phone })
+            .then((newPhoneUser) => {
+                if(newPhoneUser && !newPhoneUser._id.equals(req.params.userId)) {
+                    return res.status(409).json({
+                        error: {
+                            message: 'Phone number already in use.'
                         }
-                    }
-                });
+                    });
+                }
+                else {
+                    User.findByIdAndUpdate(req.params.userId, { 
+                        phone: req.body.phone ? req.body.phone : user.phone,
+                        password: req.body.password ? req.body.password : user.password,
+                        name: req.body.name ? req.body.name : user.name,
+                        gender: req.body.gender ? req.body.gender : user.gender,
+                        status: req.body.status ? req.body.status : user.status
+                    }, { new: true, runValidators: true })
+                    .then(result => {
+                        res.status(200).json({
+                            message: 'User updated successfully',
+                            data: {
+                                user: {
+                                    _id: result._id,
+                                    phone: result.phone,
+                                    name: result.name,
+                                    gender: result.gender,
+                                    status: result.status
+                                }
+                            }
+                        });
+                    })
+                    .catch(err => errorHandler(res, err));
+                }
             })
-            .catch(err => errorHandler(res, err));
+            .catch((err) => errorHandler(res, err));
         }
     })
     .catch(err => errorHandler(res, err));
