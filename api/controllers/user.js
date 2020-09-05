@@ -3,7 +3,7 @@ const errorHandler = require('../util/errorHandler');
 
 const User = require('../models/user');
 const History = require('../models/history');
-
+const Shop = require('../models/shop');
 
 exports.user_getAll = (req, res, next) => {
     User.find()
@@ -12,6 +12,83 @@ exports.user_getAll = (req, res, next) => {
             message: 'Users returned successfully',
             data: users
         });
+    })
+    .catch(err => errorHandler(res, err));
+};
+
+
+exports.user_getUserByPhone = (req, res, next) => {
+    User.findOne({ phone: req.params.phone })
+    .then(user => {
+        res.status(200).json({
+            message: 'User returned successfully',
+            data: user
+        });
+    })
+    .catch(err => errorHandler(res, err));
+};
+
+
+exports.user_getAffectedUsers = (req, res, next) => {
+    User.findById(req.params.userId)
+    .then(user => {
+        if(!user) {
+            res.status(404).json({
+                error: {
+                    message: 'User not found'
+                }
+            });
+        }
+        else {
+            var fortnightAgo = new Date(Date.now() - 12096e5);
+
+            History.find({ user: req.body.userId, checkIn: { $gte: fortnightAgo } })
+            .then(histories => {
+                if(histories.length <= 0) {
+                    return res.status(200).json({
+                        message: 'No Affected User'
+                    });
+                }
+
+                const query = histories.map(history => {
+                    return {
+                        shop: history.shop,
+                        checkIn: { 
+                            $gte: new Date(history.checkIn.getFullYear(), history.checkIn.getMonth(), history.checkIn.getDate(), 0, 0, 0),
+                            $lte: new Date(history.checkIn.getFullYear(), history.checkIn.getMonth(), history.checkIn.getDate() + 1, 0, 0, 0)
+                        }
+                    }
+                });
+                
+                
+                let affectedUsersAdded = {};
+                let affectedUsers = [];
+                
+                History.find({ $and: [ { user: { $ne: req.body.userId } } , { $or: query }] })
+                .then(involvedHistories => {
+                    const userIdQuery = involvedHistories.map(history => {
+                        if(!affectedUsersAdded[history.user]) {
+                            affectedUsersAdded[history.user] = true;
+                            affectedUsers.push({ user: history.user });
+                        }
+
+                        return { _id: history.user }
+                    });
+
+                    User.populate(affectedUsers, { path: 'user' }, (err, populated_result) => {
+                        if(err) return errorHandler(res, err);
+
+                        res.status(200).json({
+                            message: 'Affected user returned successfully',
+                            data: populated_result
+                        });
+                    });
+                })
+                .catch(err => errorHandler(res, err));
+
+            })
+            .catch(err => errorHandler(res, err));
+        }
     })
     .catch(err => errorHandler(res, err));
 };
@@ -170,7 +247,11 @@ exports.user_diagnosed = (req, res, next) => {
 
                 History.find({ user: req.body.userId, checkIn: { $gte: fortnightAgo } })
                 .then(histories => {
+                    let returnArr = {};
+
                     const query = histories.map(history => {
+                        returnArr[history.shop] = [];
+
                         return {
                             shop: history.shop,
                             checkIn: { 
@@ -179,10 +260,13 @@ exports.user_diagnosed = (req, res, next) => {
                             }
                         }
                     });
+                    
 
                     History.find({ $and: [ { user: { $ne: req.body.userId } } , { $or: query }] })
                     .then(involvedHistories => {
                         const userIdQuery = involvedHistories.map(history => {
+                            returnArr[history.shop].push(history.user);
+ 
                             return { _id: history.user }
                         });
 
