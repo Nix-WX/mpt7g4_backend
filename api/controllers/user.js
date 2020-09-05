@@ -351,6 +351,22 @@ exports.user_recovered = (req, res, next) => {
             
             User.findByIdAndUpdate(req.body.userId, { status: 'Low' }, { new : true, runValidators: true})
             .then(updatedUser => {
+
+                if(user.status === 'High') {
+                    return res.status(200).json({
+                        message: 'User updated successfully',
+                        data: {
+                            user: {
+                                _id: updatedUser._id,
+                                phone: updatedUser.phone,
+                                name: updatedUser.name,
+                                gender: updatedUser.gender,
+                                status: updatedUser.status
+                            }
+                        }
+                    });
+                }
+
                 DailyStatus.findOneAndUpdate({ date: new Date().toLocaleDateString() }, { $inc: { recovered : 1 } }, { upsert: true })
                 .then(updated => {
                     res.status(200).json({
