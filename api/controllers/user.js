@@ -3,7 +3,7 @@ const errorHandler = require('../util/errorHandler');
 
 const User = require('../models/user');
 const History = require('../models/history');
-const Shop = require('../models/shop');
+const DailyStatus = require('../models/dailyStatus');
 
 exports.user_getAll = (req, res, next) => {
     User.find()
@@ -207,18 +207,39 @@ exports.user_update = (req, res, next) => {
                         status: req.body.status ? req.body.status : user.status
                     }, { new: true, runValidators: true })
                     .then(result => {
-                        res.status(200).json({
-                            message: 'User updated successfully',
-                            data: {
-                                user: {
-                                    _id: result._id,
-                                    phone: result.phone,
-                                    name: result.name,
-                                    gender: result.gender,
-                                    status: result.status
+
+                        if(req.body.status && user.status.equals("Diagnosed") && !req.body.status.equals(user.status)) {
+                            DailyStatus.findOneAndUpdate({ date: new Date().toLocaleDateString() }, { $inc: { recovered : 1 } }, { upsert: true })
+                            .then(updated => {
+                                res.status(200).json({
+                                    message: 'User updated successfully',
+                                    data: {
+                                        user: {
+                                            _id: result._id,
+                                            phone: result.phone,
+                                            name: result.name,
+                                            gender: result.gender,
+                                            status: result.status
+                                        }
+                                    }
+                                });
+                            })
+                            .catch(err => errorHandler(res, err));
+                        } 
+                        else {
+                            res.status(200).json({
+                                message: 'User updated successfully',
+                                data: {
+                                    user: {
+                                        _id: result._id,
+                                        phone: result.phone,
+                                        name: result.name,
+                                        gender: result.gender,
+                                        status: result.status
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     })
                     .catch(err => errorHandler(res, err));
                 }
@@ -243,46 +264,56 @@ exports.user_diagnosed = (req, res, next) => {
         else {
             User.findByIdAndUpdate(req.body.userId, { status: 'Diagnosed' }, { new: true, runValidators: true })
             .then(updatedUser => {
-                var fortnightAgo = new Date(Date.now() - 12096e5);
 
-                History.find({ user: req.body.userId, checkIn: { $gte: fortnightAgo } })
-                .then(histories => {
-                    let returnArr = {};
+                DailyStatus.findOneAndUpdate({ date: new Date().toLocaleDateString() }, { $inc: { diagnosed : 1 } }, { upsert: true })
+                .then(updated => {
+                    var fortnightAgo = new Date(Date.now() - 12096e5);
 
-                    const query = histories.map(history => {
-                        returnArr[history.shop] = [];
-
-                        return {
-                            shop: history.shop,
-                            checkIn: { 
-                                $gte: new Date(history.checkIn.getFullYear(), history.checkIn.getMonth(), history.checkIn.getDate(), 0, 0, 0),
-                                $lte: new Date(history.checkIn.getFullYear(), history.checkIn.getMonth(), history.checkIn.getDate() + 1, 0, 0, 0)
-                            }
-                        }
-                    });
-                    
-
-                    History.find({ $and: [ { user: { $ne: req.body.userId } } , { $or: query }] })
-                    .then(involvedHistories => {
-                        const userIdQuery = involvedHistories.map(history => {
-                            returnArr[history.shop].push(history.user);
- 
-                            return { _id: history.user }
-                        });
-
-                        User.updateMany({ $or: userIdQuery }, { $set: { status: 'High' } })
-                        .then(result => {
-                            res.status(200).json({
-                                message: 'Affected user updated successfully'
+                    History.find({ user: req.body.userId, checkIn: { $gte: fortnightAgo } })
+                    .then(histories => {
+                        if(histories.length <= 0) {
+                            return res.status(200).json({
+                                message: 'No Affected User'
                             });
+                        }
+
+                        let returnArr = {};
+
+                        const query = histories.map(history => {
+                            returnArr[history.shop] = [];
+
+                            return {
+                                shop: history.shop,
+                                checkIn: { 
+                                    $gte: new Date(history.checkIn.getFullYear(), history.checkIn.getMonth(), history.checkIn.getDate(), 0, 0, 0),
+                                    $lte: new Date(history.checkIn.getFullYear(), history.checkIn.getMonth(), history.checkIn.getDate() + 1, 0, 0, 0)
+                                }
+                            }
+                        });
+                        
+
+                        History.find({ $and: [ { user: { $ne: req.body.userId } } , { $or: query }] })
+                        .then(involvedHistories => {
+                            const userIdQuery = involvedHistories.map(history => {
+                                returnArr[history.shop].push(history.user);
+    
+                                return { _id: history.user }
+                            });
+
+                            User.updateMany({ $or: userIdQuery }, { $set: { status: 'High' } })
+                            .then(result => {
+                                res.status(200).json({
+                                    message: 'Affected user updated successfully'
+                                });
+                            })
+                            .catch(err => errorHandler(res, err));
                         })
                         .catch(err => errorHandler(res, err));
+
                     })
                     .catch(err => errorHandler(res, err));
-
                 })
                 .catch(err => errorHandler(res, err));
-
             })
             .catch(err => errorHandler(res, err));
         }

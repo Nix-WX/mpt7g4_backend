@@ -3,7 +3,6 @@ const errorHandler = require('../util/errorHandler');
 const User = require('../models/user');
 const Shop = require('../models/shop');
 const History = require('../models/history');
-const e = require('express');
 
 exports.history_getAll = (req, res, next) => {
     History.find()

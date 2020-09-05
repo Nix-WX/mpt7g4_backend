@@ -5,11 +5,11 @@ const mongoose = require('mongoose');
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
-const port = 3000;
 
 const UserRoutes = require('./api/routes/user');
 const ShopRoutes = require('./api/routes/shop');
 const HistoryRoutes = require('./api/routes/history');
+const DailyStatusRoutes = require('./api/routes/dailystatus');
 
 
 // connect to database
@@ -42,6 +42,7 @@ app.use((req, res, next) => {
 app.use('/user', UserRoutes);
 app.use('/shop', ShopRoutes);
 app.use('/history', HistoryRoutes);
+app.use('/daily', DailyStatusRoutes);
 
 app.get('/', (req, res, next) => {
     res.status(200).json({
