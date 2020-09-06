@@ -10,6 +10,6 @@ const options = {
 };
 
 const port = process.env.PORT;
-const server = http.createServer(app);
+const server = https.createServer(options, app);
 
 server.listen(port);
